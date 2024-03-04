@@ -8,69 +8,23 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from MediapipeTransferLinear import MediapipeTransferLinear
-from dataset import (
-    DATA_DIR,
-    MediapipeDataset,
-    FilewiseShuffleSampler,
-    fetch_datatset_info,
-)
+from MediapipeDataset import get_dataloader
 
 
 if __name__ == "__main__":
 
-    inputs_dir_train = os.path.join(
-        os.path.dirname(__file__), "dataset", "data", "inputs"
-    )
-    outputs_dir_train = os.path.join(
-        os.path.dirname(__file__), "dataset", "data", "outputs"
-    )
+    from constants import TRAIN_DATASET_DIR, TEST_DATASET_DIR
 
-    # Fetch the dataset info
-    indices_to_file_index_train, data_indices_in_files_train = fetch_datatset_info(
-        inputs_dir_train, outputs_dir_train
-    )
+    inputs_dir_train = os.path.join(TRAIN_DATASET_DIR, "inputs")
+    outputs_dir_train = os.path.join(TRAIN_DATASET_DIR, "outputs")
 
-    train_dataset = MediapipeDataset(
-        inputs_dir_train,
-        outputs_dir_train,
-        indices_to_file_index_train,
-        data_indices_in_files_train,
-        device="cpu",
-    )
+    inputs_dir_test = os.path.join(TEST_DATASET_DIR, "inputs")
+    outputs_dir_test = os.path.join(TEST_DATASET_DIR, "outputs")
 
-    inputs_dir_test = os.path.join(
-        os.path.dirname(__file__),
-        "dataset",
-        "data",
-        "test",
-        "inputs",
-    )
-    outputs_dir_test = os.path.join(
-        os.path.dirname(__file__),
-        "dataset",
-        "data",
-        "test",
-        "outputs",
-    )
+    train_loader = get_dataloader(inputs_dir_train, outputs_dir_train)
+    test_loader = get_dataloader(inputs_dir_test, outputs_dir_test)
 
-    # Fetch the dataset info
-    indices_to_file_index_test, data_indices_in_files_test = fetch_datatset_info(
-        inputs_dir_test, outputs_dir_test
-    )
-
-    test_dataset = MediapipeDataset(
-        inputs_dir_test,
-        outputs_dir_test,
-        indices_to_file_index_test,
-        data_indices_in_files_test,
-        device="cpu",
-    )
-
-    # get the first item from the dataset
-
-    print(len(train_dataset), len(test_dataset))
-
-    # Assuming you have your CustomDataset class defined
+    print(len(train_loader), len(test_loader))
 
     # Hyperparameters (adjust based on your needs)
     learning_rate = 0.001
@@ -82,14 +36,6 @@ if __name__ == "__main__":
     loss_fn = torch.nn.MSELoss(reduction="none")  # Mean squared error for regression
     loss_fn2 = torch.nn.MSELoss(reduction="mean")  # Mean squared error for regression
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
-    BTACH_SIZE = 8
-
-    # Create data loaders (replace with your actual data paths)
-    train_loader = DataLoader(train_dataset, batch_size=BTACH_SIZE, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=BTACH_SIZE, shuffle=False)
-
-    # print(train_loader)
 
     writer = SummaryWriter()
 

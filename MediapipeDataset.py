@@ -1,9 +1,10 @@
 import os
-from typing import Tuple, Dict, List, Iterator, Sequence
+from typing import Tuple, Dict, List
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset, Sampler
+from torch.utils.data import Dataset, DataLoader
+from FilewiseShuffleSampler import FilewiseShuffleSampler
 
 
 class MediapipeDataset(Dataset):
@@ -86,33 +87,7 @@ class MediapipeDataset(Dataset):
         return self.current_inputs[idx], self.current_outputs[idx]
 
 
-class FilewiseShuffleSampler(Sampler):
-    """
-    Shuffle the indices of the data in a filewise manner.
-    This is useful when the data is stored in multiple files and you want to shuffle the data within each file.
-    """
-
-    def __init__(
-        self, data_indices_in_files: Sequence[Sequence[int]] = None, generator=None
-    ) -> None:
-        """
-        Args:
-            data_indices_in_files (list): A list of list of indeices for each file.
-            generator (torch.Generator, optional): Generator used for shuffling. Default is None.
-        """
-        self.data_indices_in_files = data_indices_in_files
-        self.generator = generator
-
-    def __iter__(self) -> Iterator[int]:
-        for data_indices in self.data_indices_in_files:
-            for i in torch.randperm(len(data_indices), generator=self.generator):
-                yield data_indices[i]
-
-    def __len__(self) -> int:
-        return sum([len(sizes) for sizes in self.data_indices_in_files])
-
-
-def fetch_datatset_info(inputs_dir, outputs_dir) -> Tuple[Dict, List]:
+def fetch_datatset_info(inputs_dir) -> Tuple[Dict, List]:
 
     file_idx = 0
     indices_to_file_index = {}
@@ -136,26 +111,10 @@ def fetch_datatset_info(inputs_dir, outputs_dir) -> Tuple[Dict, List]:
     return indices_to_file_index, data_indices_in_files
 
 
-if __name__ == "__main__":
+def get_dataloader(inputs_dir, outputs_dir):
 
-    from torch.utils.data import DataLoader
-    from FilewiseShuffleSampler import FilewiseShuffleSampler
-
-    inputs_dir = os.path.join(os.path.dirname(__file__), "data", "inputs")
-    outputs_dir = os.path.join(os.path.dirname(__file__), "data", "outputs")
-
-    if not os.path.exists(inputs_dir):
-        os.makedirs(inputs_dir)
-
-    if not os.path.exists(outputs_dir):
-        os.makedirs(outputs_dir)
-
-    indices_to_file_index, data_indices_in_files = fetch_datatset_info(
-        inputs_dir, outputs_dir
-    )
-
-    print(f"indices_to_file_index size: {len(indices_to_file_index)}")
-    print(f"data_indices_in_files: {data_indices_in_files}")
+    # Fetch the dataset info
+    indices_to_file_index, data_indices_in_files = fetch_datatset_info(inputs_dir)
 
     dataset = MediapipeDataset(
         inputs_dir,
@@ -171,6 +130,33 @@ if __name__ == "__main__":
         sampler=FilewiseShuffleSampler(data_indices_in_files=data_indices_in_files),
     )
 
-    for inputs, outputs in dataloader:
-        print(inputs.shape, outputs.shape)
+    return dataloader
+
+
+if __name__ == "__main__":
+
+    from constants import TRAIN_DATASET_DIR, TEST_DATASET_DIR
+
+    inputs_dir_train = os.path.join(TRAIN_DATASET_DIR, "inputs")
+    outputs_dir_train = os.path.join(TRAIN_DATASET_DIR, "outputs")
+
+    inputs_dir_test = os.path.join(TEST_DATASET_DIR, "inputs")
+    outputs_dir_test = os.path.join(TEST_DATASET_DIR, "outputs")
+
+    dataloader_train = get_dataloader(inputs_dir_train, outputs_dir_train)
+
+    for i, (inputs, outputs) in enumerate(dataloader_train):
+        # print(inputs.shape, outputs.shape)
         # break
+        pass
+
+    print("train loader works")
+
+    dataloader_test = get_dataloader(inputs_dir_test, outputs_dir_test)
+
+    for i, (inputs, outputs) in enumerate(dataloader_test):
+        # print(inputs.shape, outputs.shape)
+        # break
+        pass
+
+    print("test loader works")
