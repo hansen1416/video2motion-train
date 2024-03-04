@@ -130,6 +130,7 @@ def get_dataloader(inputs_dir, outputs_dir):
         dataset,
         batch_size=16,
         sampler=FilewiseShuffleSampler(data_indices_in_files=data_indices_in_files),
+        num_workers=0,  # loaded in the main process
     )
 
     return dataloader
