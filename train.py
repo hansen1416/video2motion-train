@@ -26,16 +26,19 @@ if __name__ == "__main__":
 
     print(len(train_loader), len(test_loader))
 
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+
     # Hyperparameters (adjust based on your needs)
     learning_rate = 0.001
     epochs = 500
 
     model = MediapipeTransferLinear()
+    model.to(device)
 
     # Define loss function and optimizer
-    loss_fn = torch.nn.MSELoss(reduction="none")  # Mean squared error for regression
-    loss_fn2 = torch.nn.MSELoss(reduction="mean")  # Mean squared error for regression
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    loss_fn = torch.nn.MSELoss(reduction="none").to(device)
+    loss_fn2 = torch.nn.MSELoss(reduction="mean").to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate).to(device)
 
     writer = SummaryWriter()
 
@@ -45,23 +48,13 @@ if __name__ == "__main__":
             # Forward pass
             outputs = model(features)
 
-            # # reshape the outputs from (bacth_size, 66) to (batch_size, 22, 3)
-            # outputs = outputs.reshape(-1, 22, 3)
-            # targets = targets.reshape(-1, 22, 3)
-
-            # euler2vector(outputs)
-
             # Calculate loss
             loss = loss_fn(
                 outputs, targets
             )  # Compare outputs with input data (assume labels unavailable)
 
-            # print(loss)
-
             # get the sqrt of the sum of the squares `loss_mid`
             loss_result = torch.sqrt(torch.sum(torch.sum(loss, dim=2) ** 2))
-
-            # print(loss_result)
 
             # Backward pass and optimize
             optimizer.zero_grad()

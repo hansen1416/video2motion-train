@@ -113,6 +113,8 @@ def fetch_datatset_info(inputs_dir) -> Tuple[Dict, List]:
 
 def get_dataloader(inputs_dir, outputs_dir):
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     # Fetch the dataset info
     indices_to_file_index, data_indices_in_files = fetch_datatset_info(inputs_dir)
 
@@ -121,7 +123,7 @@ def get_dataloader(inputs_dir, outputs_dir):
         outputs_dir,
         indices_to_file_index,
         data_indices_in_files,
-        device="cpu",
+        device=device,
     )
 
     dataloader = DataLoader(
