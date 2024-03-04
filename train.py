@@ -38,7 +38,7 @@ if __name__ == "__main__":
     # Define loss function and optimizer
     loss_fn = torch.nn.MSELoss(reduction="none").to(device)
     loss_fn2 = torch.nn.MSELoss(reduction="mean").to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     writer = SummaryWriter()
 
