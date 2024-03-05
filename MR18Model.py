@@ -17,9 +17,9 @@ class WeightedCombineLayer(nn.Module):
         return input1 * self.weight_inp2 + input2 * self.weight_inp2
 
 
-class MediapipeResnet18JoinedModel(nn.Module):
+class MR18Model(nn.Module):
     def __init__(self) -> None:
-        super(MediapipeResnet18JoinedModel, self).__init__()
+        super(MR18Model, self).__init__()
 
         self.res_dp1 = nn.Dropout(0.25)
         self.res_fc1 = nn.Linear(512, 256)

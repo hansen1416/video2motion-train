@@ -5,14 +5,14 @@ import numpy as np
 import torch
 
 
-from MediapipeResnet18JoinedModel import MediapipeResnet18JoinedModel
+from MR18Model import MR18Model
 
 if __name__ == "__main__":
 
     saved_model_path = os.path.join("models", "model_24.pth")
 
     # load model saved by `torch.save(model.state_dict(), "model.pth")`
-    model = MediapipeResnet18JoinedModel()
+    model = MR18Model()
 
     model.load_state_dict(
         torch.load(saved_model_path, map_location=torch.device("cpu"))

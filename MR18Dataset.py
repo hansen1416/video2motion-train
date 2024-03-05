@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import Dataset
 
 
-class MediapipeResnet18JoinedDataset(Dataset):
+class MR18Dataset(Dataset):
 
     def __init__(
         self,
@@ -56,9 +56,7 @@ if __name__ == "__main__":
 
     from constants import MEDIAPIPE_JOINED_DIR, RESNET_JOINED_DIR, ANIM_EULER_JOINED_DIR
 
-    ds = MediapipeResnet18JoinedDataset(
-        MEDIAPIPE_JOINED_DIR, RESNET_JOINED_DIR, ANIM_EULER_JOINED_DIR
-    )
+    ds = MR18Dataset(MEDIAPIPE_JOINED_DIR, RESNET_JOINED_DIR, ANIM_EULER_JOINED_DIR)
 
     print(len(ds))
 

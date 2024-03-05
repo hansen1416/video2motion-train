@@ -8,14 +8,14 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from MediapipeResnet18JoinedDataset import MediapipeResnet18JoinedDataset
-
+from MR18Dataset import MR18Dataset
+from MR18Model import MR18Model
 
 if __name__ == "__main__":
 
     from constants import MEDIAPIPE_JOINED_DIR, RESNET_JOINED_DIR, ANIM_EULER_JOINED_DIR
 
-    dataset = MediapipeResnet18JoinedDataset(
+    dataset = MR18Dataset(
         MEDIAPIPE_JOINED_DIR, RESNET_JOINED_DIR, ANIM_EULER_JOINED_DIR
     )
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     learning_rate = 0.001
     epochs = 500
 
-    model = MediapipeResnet18JoinedModel()
+    model = MR18Model()
     model.to(device)
 
     # Define loss function and optimizer
