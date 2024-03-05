@@ -7,6 +7,29 @@ import torch
 
 from MR18Model import MR18Model
 
+
+def get_landmarks1d(landmarks):
+    """
+    Convert landmarks to 1d tensor, drop visibility and presence
+
+    Args:
+        landmarks: list of dict
+    Returns:
+        landmarks1d: ndarray
+    """
+    landmarks1d = []
+    # flattten landmarks
+    for l in landmarks:
+        landmarks1d.append(l["x"])
+        landmarks1d.append(l["y"])
+        landmarks1d.append(l["z"])
+
+    # convert landmarks to tensor
+    landmarks1d = np.array(landmarks1d, dtype=np.float32)
+
+    return landmarks1d
+
+
 if __name__ == "__main__":
 
     saved_model_path = os.path.join("models", "model_24.pth")
