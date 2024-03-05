@@ -43,15 +43,20 @@ class MediapipeResnet18JoinedModel(nn.Module):
     def forward(self, mediapipe_input, resnet_input):
 
         mediapipe_input = self.mp_fc1(mediapipe_input)
+        mediapipe_input = nn.functional.tanh(mediapipe_input)
         mediapipe_input = self.mp_fc2(mediapipe_input)
+        mediapipe_input = nn.functional.tanh(mediapipe_input)
         mediapipe_input = self.mp_fc3(mediapipe_input)
+        mediapipe_input = nn.functional.tanh(mediapipe_input)
         mediapipe_input = self.mp_fc4(mediapipe_input)
         # now the shape pf mediapipe_input is (batch_size, 66)
 
         resnet_input = self.res_dp1(resnet_input)
         resnet_input = self.res_fc1(resnet_input)
+        resnet_input = nn.functional.tanh(resnet_input)
         resnet_input = self.res_dp2(resnet_input)
         resnet_input = self.res_fc2(resnet_input)
+        resnet_input = nn.functional.tanh(resnet_input)
         resnet_input = self.res_dp3(resnet_input)
         resnet_input = self.res_fc3(resnet_input)
         # clamp the values to be between -pi and pi
