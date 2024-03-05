@@ -61,7 +61,10 @@ if __name__ == "__main__":
     )
 
     print(len(ds))
-    print(ds[0])
+
+    mediapipe_input, resnet_input, anim_euler_output = ds[0]
+
+    print(mediapipe_input.shape, resnet_input.shape, anim_euler_output.shape)
 
     dl = DataLoader(ds, batch_size=32, shuffle=True)
 
