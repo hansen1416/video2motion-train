@@ -15,8 +15,10 @@ class WeightedCombineLayer(nn.Module):
     def __init__(self):
         super(WeightedCombineLayer, self).__init__()
         # Initialize weights with 0.5
-        self.weight_inp1 = torch.nn.Parameter(torch.full((1, 66), 0.5))
-        self.weight_inp2 = torch.nn.Parameter(torch.full((1, 66), 0.5))
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # Initialize weights with 0.5
+        self.weight_inp1 = torch.nn.Parameter(torch.full((1, 66), 0.5)).to(device)
+        self.weight_inp2 = torch.nn.Parameter(torch.full((1, 66), 0.5)).to(device)
 
     def forward(self, input1, input2):
         return input1 * self.weight_inp2 + input2 * self.weight_inp2
@@ -128,34 +130,36 @@ if __name__ == "__main__":
                 "Loss/train", loss_result.item(), epoch * len(train_loader) + i
             )  # Log train loss
 
-            # Validation (optional, replace with your validation logic)
-            if (i + 1) % 10 == 0:  # Validate every 100 batches
-                with torch.no_grad():
-                    test_loss_value = 0.0
-                    test_acc = 0.0
-                    for (
-                        mediapipe_input_test,
-                        resnet_input_test,
-                        anim_euler_target_test,
-                    ) in test_loader:
-                        test_outputs = model(mediapipe_input_test, resnet_input_test)
-
-                        test_loss = loss_fn(test_outputs, anim_euler_target_test)
-                        test_loss_result = torch.sqrt(
-                            torch.sum(torch.sum(test_loss, dim=2) ** 2)
-                        )
-
-                        test_loss_value += test_loss_result.item()
-
-                    test_loss_value /= len(test_loader)
-
-                    writer.add_scalar(
-                        "Loss/test", test_loss_value, epoch * len(train_loader) + i
-                    )
-
+            if i and (i % 1000 == 0):
                 print(
-                    f"Epoch {epoch+1}/{epochs}, Batch {i+1}/{len(train_loader)}, Loss: {loss_result.item():.4f}, Test Loss: {test_loss_value:.4f}"
+                    f"Epoch {epoch+1}/{epochs}, Batch {i}/{len(train_loader)}, Loss: {loss_result.item():.4f}"
                 )
+
+        # Validation (optional, replace with your validation logic)
+        with torch.no_grad():
+            test_loss_value = 0.0
+            test_acc = 0.0
+            for (
+                mediapipe_input_test,
+                resnet_input_test,
+                anim_euler_target_test,
+            ) in test_loader:
+                test_outputs = model(mediapipe_input_test, resnet_input_test)
+
+                test_loss = loss_fn(test_outputs, anim_euler_target_test)
+                test_loss_result = torch.sqrt(
+                    torch.sum(torch.sum(test_loss, dim=2) ** 2)
+                )
+
+                test_loss_value += test_loss_result.item()
+
+            test_loss_value /= len(test_loader)
+
+        writer.add_scalar("Loss/test", test_loss_value, (epoch + 1) * len(train_loader))
+
+        print(
+            f"Epoch {epoch+1}/{epochs}, Batch {i+1}/{len(train_loader)}, Loss: {loss_result.item():.4f}, Test Loss: {test_loss_value:.4f}"
+        )
 
         # Print training progress (optional)
         # print(f"Epoch {epoch+1}/{epochs}, Loss: {loss_result.item():.4f}")
