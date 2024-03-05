@@ -1,4 +1,5 @@
 import os
+from typing import Tuple
 
 import numpy as np
 import torch
@@ -26,7 +27,7 @@ if __name__ == "__main__":
 
     print(len(train_loader), len(test_loader))
 
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Hyperparameters (adjust based on your needs)
     learning_rate = 0.001
