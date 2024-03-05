@@ -161,22 +161,8 @@ if __name__ == "__main__":
             f"Epoch {epoch+1}/{epochs}, Batch {i+1}/{len(train_loader)}, Loss: {loss_result.item():.4f}, Test Loss: {test_loss_value:.4f}"
         )
 
-        # Print training progress (optional)
-        # print(f"Epoch {epoch+1}/{epochs}, Loss: {loss_result.item():.4f}")
-
-        #     break
-        # break
+        # every 5 epochs, save the model to local file
+        if (epoch + 1) % 5 == 0 or (epoch + 1) == epochs:
+            torch.save(model.state_dict(), os.path.join("models", f"model_{epoch}.pth"))
 
     writer.close()
-
-    # save the model to local file
-    torch.save(model.state_dict(), os.path.join("models", "model.pth"))
-
-# # Evaluate the model (assuming you have validation data)
-# with torch.no_grad():
-#     for data, _ in test_loader:
-#         outputs = model(data)
-#         # Calculate and print loss or other evaluation metrics
-#         ...
-
-# print("Training complete!")
