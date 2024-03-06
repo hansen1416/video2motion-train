@@ -4,7 +4,7 @@ import json
 import numpy as np
 import torch
 
-
+from constants import CHECKPOINT_DIR
 from MR18Model import MR18Model
 
 
@@ -32,7 +32,7 @@ def get_landmarks1d(landmarks):
 
 if __name__ == "__main__":
 
-    saved_model_path = os.path.join("models", "model_24.pth")
+    saved_model_path = os.path.join(CHECKPOINT_DIR, "MR18Model_24.pth")
 
     # load model saved by `torch.save(model.state_dict(), "model.pth")`
     model = MR18Model()

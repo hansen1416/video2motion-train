@@ -13,7 +13,12 @@ from MR18Model import MR18Model
 
 if __name__ == "__main__":
 
-    from constants import MEDIAPIPE_JOINED_DIR, RESNET_JOINED_DIR, ANIM_EULER_JOINED_DIR
+    from constants import (
+        MEDIAPIPE_JOINED_DIR,
+        RESNET_JOINED_DIR,
+        ANIM_EULER_JOINED_DIR,
+        CHECKPOINT_DIR,
+    )
 
     dataset = MR18Dataset(
         MEDIAPIPE_JOINED_DIR, RESNET_JOINED_DIR, ANIM_EULER_JOINED_DIR
@@ -107,6 +112,9 @@ if __name__ == "__main__":
 
         # every 5 epochs, save the model to local file
         if (epoch + 1) % 5 == 0 or (epoch + 1) == epochs:
-            torch.save(model.state_dict(), os.path.join("models", f"model_{epoch}.pth"))
+            torch.save(
+                model.state_dict(),
+                os.path.join(CHECKPOINT_DIR, f"{model.__class__.__name__}_{epoch}.pth"),
+            )
 
     writer.close()
