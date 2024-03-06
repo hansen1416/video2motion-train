@@ -1,9 +1,9 @@
 from torch import nn
 
 
-class MediapipeTransferLinear(nn.Module):
+class MModel(nn.Module):
     def __init__(self):
-        super(MediapipeTransferLinear, self).__init__()
+        super(MModel, self).__init__()
         self.linear1 = nn.Linear(99, 128)
         self.linear2 = nn.Linear(128, 256)
         self.linear3 = nn.Linear(256, 128)

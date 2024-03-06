@@ -31,6 +31,10 @@ ANIM_EULER_JOINED_DIR = os.path.join(
     HOME_DIR, "Documents", "video2motion", "joined", "anim_euler"
 )
 
+CHECKPOINT_DIR = os.path.join(
+    HOME_DIR, "Documents", "video2motion-train", "checkpoints"
+)
+
 if __name__ == "__main__":
 
     for f in os.listdir(TRAIN_DATASET_DIR):

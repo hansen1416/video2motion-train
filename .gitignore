@@ -54,3 +54,4 @@ openpose
 *.pth
 runs/
 models/
+checkpoints/
