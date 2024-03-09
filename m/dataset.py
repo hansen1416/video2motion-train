@@ -5,27 +5,19 @@ import torch
 from torch.utils.data import Dataset
 
 
-class MDataset(Dataset):
+class Datensatz(Dataset):
 
     def __init__(
         self,
-        mediapipe_joined_dir,
-        anim_euler_joined_dir,
+        mediapipe_data_file,
+        anim_euler_data_file,
     ) -> None:
         super().__init__()
 
-        self.mediapipe_joined_dir = mediapipe_joined_dir
-        self.anim_euler_joined_dir = anim_euler_joined_dir
-
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.mediapipe_joined = np.load(
-            os.path.join(self.mediapipe_joined_dir, "joined.npy")
-        )
-
-        self.anim_euler_joined = np.load(
-            os.path.join(self.anim_euler_joined_dir, "joined.npy")
-        )
+        self.mediapipe_joined = np.load(mediapipe_data_file)
+        self.anim_euler_joined = np.load(anim_euler_data_file)
 
         assert (
             self.mediapipe_joined.shape[0] == self.anim_euler_joined.shape[0]
@@ -47,11 +39,18 @@ class MDataset(Dataset):
 
 if __name__ == "__main__":
 
+    import sys
+
+    sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
     from torch.utils.data import DataLoader
 
     from constants import MEDIAPIPE_JOINED_DIR, ANIM_EULER_JOINED_DIR
 
-    ds = MDataset(MEDIAPIPE_JOINED_DIR, ANIM_EULER_JOINED_DIR)
+    ds = Datensatz(
+        os.path.join(MEDIAPIPE_JOINED_DIR, "joined.npy"),
+        os.path.join(ANIM_EULER_JOINED_DIR, "joined.npy"),
+    )
 
     print(len(ds))
 

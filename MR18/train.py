@@ -54,7 +54,7 @@ def train(
     loss_fn2 = torch.nn.MSELoss(reduction="mean").to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-    writer = SummaryWriter()
+    writer = SummaryWriter(log_dir=logdir)
 
     # Train the model
     for epoch in range(epochs):
@@ -130,7 +130,7 @@ if __name__ == "__main__":
 
     import sys
 
-    sys.path.append("..")
+    sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
     from constants import (
         MEDIAPIPE_JOINED_DIR,

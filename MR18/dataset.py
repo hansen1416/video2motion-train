@@ -46,7 +46,7 @@ if __name__ == "__main__":
     import sys
 
     # append ../contants to sys dir
-    sys.path.append("..")
+    sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
     from torch.utils.data import DataLoader
 
