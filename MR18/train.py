@@ -16,6 +16,9 @@ def train(
     mediapipe_data_file,
     resnet_data_file,
     anim_euler_data_file,
+    logdir="./runs",
+    write_log=True,
+    save_every=10,
 ):
     dataset = Datensatz(
         mediapipe_data_file,
@@ -74,11 +77,12 @@ def train(
             loss_result.backward()
             optimizer.step()
 
-            writer.add_scalar(
-                "Loss/train", loss_result.item(), epoch * len(train_loader) + i
-            )  # Log train loss
+            if write_log:
+                writer.add_scalar(
+                    "Loss/train", loss_result.item(), epoch * len(train_loader) + i
+                )  # Log train loss
 
-            if i and (i % 1000 == 0):
+            if i and (i % 100 == 0):
                 print(
                     f"Epoch {epoch+1}/{epochs}, Batch {i}/{len(train_loader)}, Loss: {loss_result.item():.4f}"
                 )
@@ -103,14 +107,17 @@ def train(
 
             test_loss_value /= len(test_loader)
 
-        writer.add_scalar("Loss/test", test_loss_value, (epoch + 1) * len(train_loader))
+        if write_log:
+            writer.add_scalar(
+                "Loss/test", test_loss_value, (epoch + 1) * len(train_loader)
+            )
 
         print(
             f"Epoch {epoch+1}/{epochs}, Batch {i+1}/{len(train_loader)}, Loss: {loss_result.item():.4f}, Test Loss: {test_loss_value:.4f}"
         )
 
         # every 5 epochs, save the model to local file
-        if (epoch + 1) % 5 == 0 or (epoch + 1) == epochs:
+        if (epoch + 1) % save_every == 0 or (epoch + 1) == epochs:
             torch.save(
                 model.state_dict(),
                 os.path.join(CHECKPOINT_DIR, f"{model.__class__.__name__}_{epoch}.pth"),
