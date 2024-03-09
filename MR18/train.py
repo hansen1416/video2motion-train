@@ -8,20 +8,19 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from MR18Dataset import MR18Dataset
-from MR18Model import MR18Model
+from dataset import Datensatz
+from model import Model
 
-if __name__ == "__main__":
 
-    from constants import (
-        MEDIAPIPE_JOINED_DIR,
-        RESNET_JOINED_DIR,
-        ANIM_EULER_JOINED_DIR,
-        CHECKPOINT_DIR,
-    )
-
-    dataset = MR18Dataset(
-        MEDIAPIPE_JOINED_DIR, RESNET_JOINED_DIR, ANIM_EULER_JOINED_DIR
+def train(
+    mediapipe_data_file,
+    resnet_data_file,
+    anim_euler_data_file,
+):
+    dataset = Datensatz(
+        mediapipe_data_file,
+        resnet_data_file,
+        anim_euler_data_file,
     )
 
     # Split the dataset into train and test sets
@@ -44,7 +43,7 @@ if __name__ == "__main__":
     learning_rate = 0.001
     epochs = 500
 
-    model = MR18Model()
+    model = Model()
     model.to(device)
 
     # Define loss function and optimizer
@@ -87,7 +86,7 @@ if __name__ == "__main__":
         # Validation (optional, replace with your validation logic)
         with torch.no_grad():
             test_loss_value = 0.0
-            test_acc = 0.0
+
             for (
                 mediapipe_input_test,
                 resnet_input_test,
@@ -118,3 +117,23 @@ if __name__ == "__main__":
             )
 
     writer.close()
+
+
+if __name__ == "__main__":
+
+    import sys
+
+    sys.path.append("..")
+
+    from constants import (
+        MEDIAPIPE_JOINED_DIR,
+        RESNET_JOINED_DIR,
+        ANIM_EULER_JOINED_DIR,
+        CHECKPOINT_DIR,
+    )
+
+    train(
+        os.path.join(MEDIAPIPE_JOINED_DIR, "joined.npy"),
+        os.path.join(RESNET_JOINED_DIR, "joined.npy"),
+        os.path.join(ANIM_EULER_JOINED_DIR, "joined.npy"),
+    )

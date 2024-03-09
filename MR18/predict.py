@@ -14,7 +14,7 @@ from torchvision import transforms
 from torchvision.models import resnet18, ResNet18_Weights
 
 from constants import CHECKPOINT_DIR, HOME_DIR, SCREENSHOT_DIR
-from MR18Model import MR18Model
+from Model import Model
 
 
 def get_landmarks1d(landmarks):
