@@ -12,6 +12,7 @@ from model import Model
 def train(
     mediapipe_data_file,
     anim_euler_data_file,
+    pretrained=None,
     checkpoint_dir="./checkpoints",
     logdir="./runs",
     write_log=True,
@@ -37,11 +38,24 @@ def train(
 
     print(len(train_loader), len(test_loader))
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     print("using device ", device)
 
     model = Model()
+
+    start_epoch = 0
+
+    if pretrained:
+
+        last_epoch = int(pretrained.split("_")[-1].split(".")[0])
+
+        model.load_state_dict(torch.load(pretrained, map_location=device))
+
+        print("load pretrained model from ", pretrained, " at epoch ", last_epoch)
+
+        start_epoch = last_epoch + 1
+
     model.to(device)
 
     model.train()
@@ -72,7 +86,7 @@ def train(
     writer = SummaryWriter(log_dir=logdir)
 
     # Train the model
-    for epoch in range(epochs):
+    for epoch in range(start_epoch, epochs):
 
         train_loss_value = 0.0
 
@@ -231,5 +245,6 @@ if __name__ == "__main__":
         os.path.join(MEDIAPIPE_JOINED_DIR, "joined.npy"),
         os.path.join(ANIM_EULER_JOINED_DIR, "joined.npy"),
         checkpoint_dir=CHECKPOINT_DIR,
-        save_every=1,
+        save_every=10,
+        pretrained=os.path.join(CHECKPOINT_DIR, "Model_33.pth"),
     )

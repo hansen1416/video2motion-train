@@ -43,7 +43,7 @@ def mediapipe_predict(image_file):
 
     model_path = os.path.join(
         HOME_DIR,
-        "Repos",
+        "Documents",
         "video2motion-dataset",
         "mediapipe",
         "models",
