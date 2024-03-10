@@ -56,19 +56,26 @@ def train(
 
     # Define loss function and optimizer
 
-    loss_fn1 = torch.nn.MSELoss(reduction="mean").to(device)
-    loss_fn2 = torch.nn.MSELoss(reduction="mean").to(device)
-    loss_fn3 = torch.nn.MSELoss(reduction="mean").to(device)
-    loss_fn4 = torch.nn.MSELoss(reduction="mean").to(device)
-    loss_fn5 = torch.nn.MSELoss(reduction="mean").to(device)
-    loss_fn6 = torch.nn.MSELoss(reduction="mean").to(device)
+    lossfn_hip_spine = torch.nn.MSELoss(reduction="mean").to(device)
+    lossfn_neck_head = torch.nn.MSELoss(reduction="mean").to(device)
+    lossfn_right_arm = torch.nn.MSELoss(reduction="mean").to(device)
+    lossfn_right_hand = torch.nn.MSELoss(reduction="mean").to(device)
+    lossfn_left_arm = torch.nn.MSELoss(reduction="mean").to(device)
+    lossfn_left_hand = torch.nn.MSELoss(reduction="mean").to(device)
+    lossfn_right_leg = torch.nn.MSELoss(reduction="mean").to(device)
+    lossfn_right_foot = torch.nn.MSELoss(reduction="mean").to(device)
+    lossfn_left_leg = torch.nn.MSELoss(reduction="mean").to(device)
+    lossfn_left_foot = torch.nn.MSELoss(reduction="mean").to(device)
 
-    loss_fn_test = torch.nn.MSELoss(reduction="mean").to(device)
+    lossfn_test = torch.nn.MSELoss(reduction="mean").to(device)
 
     writer = SummaryWriter(log_dir=logdir)
 
     # Train the model
     for epoch in range(epochs):
+
+        train_loss_value = 0.0
+
         for i, (mediapipe_input, anim_euler_target) in enumerate(
             train_loader
         ):  # Ignore labels for now
@@ -77,62 +84,82 @@ def train(
                 hip_spine_pred,
                 neck_head_pred,
                 right_arm_pred,
+                right_hand_pred,
                 left_arm_pred,
+                left_hand_pred,
                 right_leg_pred,
+                right_foot_pred,
                 left_leg_pred,
+                left_foot_pred,
             ) = model(mediapipe_input)
 
             hip_spine_true = anim_euler_target[:, [0, 1, 2, 3], :].view(-1, 12)
             neck_head_true = anim_euler_target[:, [4, 5], :].view(-1, 6)
-            right_arm_true = anim_euler_target[:, [6, 7, 8, 9], :].view(-1, 12)
-            left_arm_true = anim_euler_target[:, [10, 11, 12, 13], :].view(-1, 12)
-            right_leg_true = anim_euler_target[:, [14, 15, 16, 17], :].view(-1, 12)
-            left_leg_true = anim_euler_target[:, [18, 19, 20, 21], :].view(-1, 12)
+            right_arm_true = anim_euler_target[:, [6, 7, 8], :].view(-1, 9)
+            right_hand_true = anim_euler_target[:, [9], :].view(-1, 3)
+            left_arm_true = anim_euler_target[:, [10, 11, 12], :].view(-1, 9)
+            left_hand_true = anim_euler_target[:, [13], :].view(-1, 3)
+            right_leg_true = anim_euler_target[:, [14, 15], :].view(-1, 6)
+            right_foot_true = anim_euler_target[:, [16, 17], :].view(-1, 6)
+            left_leg_true = anim_euler_target[:, [18, 19], :].view(-1, 6)
+            left_foot_true = anim_euler_target[:, [20, 21], :].view(-1, 6)
 
-            loss1 = loss_fn1(hip_spine_pred, hip_spine_true)
-            loss2 = loss_fn2(neck_head_pred, neck_head_true)
-            loss3 = loss_fn3(right_arm_pred, right_arm_true)
-            loss4 = loss_fn4(left_arm_pred, left_arm_true)
-            loss5 = loss_fn5(right_leg_pred, right_leg_true)
-            loss6 = loss_fn6(left_leg_pred, left_leg_true)
+            loss_hip_spine = lossfn_hip_spine(hip_spine_pred, hip_spine_true)
+            loss_neck_head = lossfn_neck_head(neck_head_pred, neck_head_true)
+            loss_right_arm = lossfn_right_arm(right_arm_pred, right_arm_true)
+            loss_right_hand = lossfn_right_hand(right_hand_pred, right_hand_true)
+            loss_left_arm = lossfn_left_arm(left_arm_pred, left_arm_true)
+            loss_left_hand = lossfn_left_hand(left_hand_pred, left_hand_true)
+            loss_right_leg = lossfn_right_leg(right_leg_pred, right_leg_true)
+            loss_right_foot = lossfn_right_foot(right_foot_pred, right_foot_true)
+            loss_left_leg = lossfn_left_leg(left_leg_pred, left_leg_true)
+            loss_left_foot = lossfn_left_foot(left_foot_pred, left_foot_true)
 
             # Backward pass and optimize
             optimizer.zero_grad()
-            loss1.backward()
-            loss2.backward()
-            loss3.backward()
-            loss4.backward()
-            loss5.backward()
-            loss6.backward()
+
+            loss_hip_spine.backward()
+            loss_neck_head.backward()
+            loss_right_arm.backward()
+            loss_right_hand.backward()
+            loss_left_arm.backward()
+            loss_left_hand.backward()
+            loss_right_leg.backward()
+            loss_right_foot.backward()
+            loss_left_leg.backward()
+            loss_left_foot.backward()
+
             optimizer.step()
 
-            if write_log:
-                writer.add_scalar(
-                    "Loss1/train", loss1.item(), epoch * len(train_loader) + i
-                )  # Log train loss
-                writer.add_scalar(
-                    "Loss2/train", loss2.item(), epoch * len(train_loader) + i
-                )
-                writer.add_scalar(
-                    "Loss3/train", loss3.item(), epoch * len(train_loader) + i
-                )
-                writer.add_scalar(
-                    "Loss4/train", loss4.item(), epoch * len(train_loader) + i
-                )
-                writer.add_scalar(
-                    "Loss5/train", loss5.item(), epoch * len(train_loader) + i
-                )
-                writer.add_scalar(
-                    "Loss6/train", loss6.item(), epoch * len(train_loader) + i
-                )
+            train_loss_value += (
+                loss_hip_spine.item()
+                + loss_neck_head.item()
+                + loss_right_arm.item()
+                + loss_right_hand.item()
+                + loss_left_arm.item()
+                + loss_left_hand.item()
+                + loss_right_leg.item()
+                + loss_right_foot.item()
+                + loss_left_leg.item()
+                + loss_left_foot.item()
+            ) / 10
 
             if i and (i % 100 == 0):
                 print(
-                    f"Epoch {epoch+1}/{epochs}, Batch {i}/{len(train_loader)}, \
-                        Loss: {loss1.item():.4f}, {loss2.item():.4f}, {loss3.item():.4f}, {loss4.item():.4f}, {loss5.item():.4f}, {loss6.item():.4f}"
+                    f"Epoch {epoch+1}/{epochs}, Batch {i}/{len(train_loader)}, Loss: "
+                    + f"hip_spine: {loss_hip_spine.item():.4f}, neck_head {loss_neck_head.item():.4f}, "
+                    + f"right_arm {loss_right_arm.item():.4f}, right_hand {loss_right_hand.item():.4f}, "
+                    + f"left_arm {loss_left_arm.item():.4f}, left_hand {loss_left_hand.item():.4f}, "
+                    + f"right_leg {loss_right_leg.item():.4f}, right_foot {loss_right_foot.item():.4f}, "
+                    + f"left_leg {loss_left_leg.item():.4f}, left_foot {loss_left_foot.item():.4f}"
                 )
 
         scheduler.step()
+
+        if write_log:
+            writer.add_scalar(
+                "Loss/train", train_loss_value / len(train_loader), (epoch + 1)
+            )
 
         # Validation (optional, replace with your validation logic)
         with torch.no_grad():
@@ -146,9 +173,13 @@ def train(
                     hip_spine,
                     neck_head,
                     right_arm,
+                    right_hand,
                     left_arm,
+                    left_hand,
                     right_leg,
+                    right_foot,
                     left_leg,
+                    left_foot,
                 ) = model(mediapipe_input_test)
 
                 test_outputs = torch.cat(
@@ -156,31 +187,27 @@ def train(
                         hip_spine,
                         neck_head,
                         right_arm,
+                        right_hand,
                         left_arm,
+                        left_hand,
                         right_leg,
+                        right_foot,
                         left_leg,
+                        left_foot,
                     ),
                     1,
                 )
 
                 test_outputs = test_outputs.reshape(-1, 22, 3)
 
-                test_loss = loss_fn_test(test_outputs, anim_euler_target_test)
+                test_loss = lossfn_test(test_outputs, anim_euler_target_test)
 
                 test_loss_value += test_loss.item()
 
-            test_loss_value /= len(test_loader)
-
-        # if write_log:
-        #     writer.add_scalar(
-        #         "Loss/test", test_loss_value, (epoch + 1) * len(train_loader)
-        #     )
-
-        print(
-            f"Epoch {epoch+1}/{epochs}, Batch {i+1}/{len(train_loader)}, \
-                Loss: {loss1.item():.4f}, {loss2.item():.4f}, {loss3.item():.4f}, {loss4.item():.4f}, {loss5.item():.4f}, {loss6.item():.4f} \
-                Test Loss: {test_loss_value:.4f}"
-        )
+        if write_log:
+            writer.add_scalar(
+                "Loss/test", test_loss_value / len(test_loader), (epoch + 1)
+            )
 
         # every 5 epochs, save the model to local file
         if (epoch + 1) % save_every == 0 or (epoch + 1) == epochs:
@@ -204,4 +231,5 @@ if __name__ == "__main__":
         os.path.join(MEDIAPIPE_JOINED_DIR, "joined.npy"),
         os.path.join(ANIM_EULER_JOINED_DIR, "joined.npy"),
         checkpoint_dir=CHECKPOINT_DIR,
+        save_every=1,
     )
