@@ -230,8 +230,8 @@ if __name__ == "__main__":
     from constants import CHECKPOINT_DIR, HOME_DIR
 
     predict_animation(
-        animation_name="Crouch Turn Left 90.json",
-        saved_model_path=os.path.join(CHECKPOINT_DIR, "Model_109.pth"),
+        animation_name="Stand Cover To Look.json",
+        saved_model_path=os.path.join(CHECKPOINT_DIR, "Model_269.pth"),
         mediapipe_model_path=os.path.join(
             HOME_DIR,
             "Documents",
