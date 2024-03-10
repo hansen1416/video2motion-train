@@ -31,7 +31,9 @@ ANIM_EULER_JOINED_DIR = os.path.join(
     HOME_DIR, "Documents", "video2motion", "joined", "anim_euler"
 )
 
-CHECKPOINT_DIR = os.path.join(HOME_DIR, "Repos", "video2motion-train", "checkpoints")
+CHECKPOINT_DIR = os.path.join(
+    HOME_DIR, "Documents", "video2motion-train", "checkpoints"
+)
 
 SCREENSHOT_DIR = os.path.join(HOME_DIR, "Documents", "video2motion", "screenshots")
 

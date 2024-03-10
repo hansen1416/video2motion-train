@@ -3,6 +3,7 @@ import os
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+import torch.optim.lr_scheduler as lr_scheduler
 
 from dataset import Datensatz
 from model import Model
@@ -38,12 +39,20 @@ def train(
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # Hyperparameters (adjust based on your needs)
-    learning_rate = 0.001
-    epochs = 500
+    print("using device ", device)
 
     model = Model()
     model.to(device)
+
+    model.train()
+
+    # use a leaning rate scheduler
+    learning_rate = 0.001
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    scheduler = lr_scheduler.LinearLR(
+        optimizer, start_factor=1.0, end_factor=0.1, total_iters=300
+    )
+    epochs = 500
 
     # Define loss function and optimizer
 
@@ -54,7 +63,7 @@ def train(
     loss_fn5 = torch.nn.MSELoss(reduction="mean").to(device)
     loss_fn6 = torch.nn.MSELoss(reduction="mean").to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    loss_fn_test = torch.nn.MSELoss(reduction="mean").to(device)
 
     writer = SummaryWriter(log_dir=logdir)
 
@@ -123,24 +132,44 @@ def train(
                         Loss: {loss1.item():.4f}, {loss2.item():.4f}, {loss3.item():.4f}, {loss4.item():.4f}, {loss5.item():.4f}, {loss6.item():.4f}"
                 )
 
-        # # Validation (optional, replace with your validation logic)
-        # with torch.no_grad():
-        #     test_loss_value = 0.0
+        scheduler.step()
 
-        #     for (
-        #         mediapipe_input_test,
-        #         anim_euler_target_test,
-        #     ) in test_loader:
-        #         test_outputs = model(mediapipe_input_test)
+        # Validation (optional, replace with your validation logic)
+        with torch.no_grad():
+            test_loss_value = 0.0
 
-        #         test_loss = loss_fn(test_outputs, anim_euler_target_test)
-        #         test_loss_result = torch.sqrt(
-        #             torch.sum(torch.sum(test_loss, dim=2) ** 2)
-        #         )
+            for (
+                mediapipe_input_test,
+                anim_euler_target_test,
+            ) in test_loader:
+                (
+                    hip_spine,
+                    neck_head,
+                    right_arm,
+                    left_arm,
+                    right_leg,
+                    left_leg,
+                ) = model(mediapipe_input_test)
 
-        #         test_loss_value += test_loss_result.item()
+                test_outputs = torch.cat(
+                    (
+                        hip_spine,
+                        neck_head,
+                        right_arm,
+                        left_arm,
+                        right_leg,
+                        left_leg,
+                    ),
+                    1,
+                )
 
-        #     test_loss_value /= len(test_loader)
+                test_outputs = test_outputs.reshape(-1, 22, 3)
+
+                test_loss = loss_fn_test(test_outputs, anim_euler_target_test)
+
+                test_loss_value += test_loss.item()
+
+            test_loss_value /= len(test_loader)
 
         # if write_log:
         #     writer.add_scalar(
@@ -149,7 +178,8 @@ def train(
 
         print(
             f"Epoch {epoch+1}/{epochs}, Batch {i+1}/{len(train_loader)}, \
-                Loss: {loss1.item():.4f}, {loss2.item():.4f}, {loss3.item():.4f}, {loss4.item():.4f}, {loss5.item():.4f}, {loss6.item():.4f}"
+                Loss: {loss1.item():.4f}, {loss2.item():.4f}, {loss3.item():.4f}, {loss4.item():.4f}, {loss5.item():.4f}, {loss6.item():.4f} \
+                Test Loss: {test_loss_value:.4f}"
         )
 
         # every 5 epochs, save the model to local file
