@@ -32,6 +32,8 @@ criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.0005)
 
 
+best_test_loss = 1000
+
 for epoch in range(num_epochs):
 
     for i, (input_tensor, target_tensor) in enumerate(train_loader):
@@ -48,5 +50,34 @@ for epoch in range(num_epochs):
         loss.backward()
         optimizer.step()
 
-    if epoch % 10 == 0:
-        print("Epoch: {} -- Training loss (MSE) {}".format(epoch, loss.item()))
+    print("Epoch: {} -- Training loss (MSE) {}".format(epoch, loss.item()))
+
+    if epoch % 50 == 0:
+        # try test set
+        with torch.no_grad():
+
+            total_loss = 0
+
+            for input_test, target_test in train_loader:
+
+                if input_test.shape[0] != batch_size:
+                    continue
+
+                output_test = model(input_test.view(batch_size, seq_length, -1))
+                output_test = output_test.squeeze()
+                loss_test = criterion(
+                    output_test, target_test.view(batch_size, seq_length, -1)
+                )
+
+                total_loss += loss_test.item()
+
+            print(
+                "Epoch: {} -- Test loss (MSE) {}".format(
+                    epoch, total_loss / len(test_loader)
+                )
+            )
+
+            if total_loss < best_test_loss:
+                best_test_loss = total_loss
+                torch.save(model.state_dict(), f"best_model_{epoch}.pth")
+                print("Model saved")
