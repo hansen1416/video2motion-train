@@ -139,6 +139,7 @@ def train(
 
 if __name__ == "__main__":
 
-    model = Seq2SeqLSTM(input_size=17 * 3, hidden_size=64, num_layers=2)
+    model = Seq2SeqLSTM(input_size=17 * 3, hidden_size=128, num_layers=4)
 
-    train(model, pretrained_checkpoint=os.path.join("checkpoints", "model_280.pth"))
+    # train(model, pretrained_checkpoint=os.path.join("checkpoints", "model_280.pth"))
+    train(model)
