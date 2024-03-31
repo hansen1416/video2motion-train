@@ -1,3 +1,5 @@
+import os
+
 import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
@@ -37,7 +39,7 @@ def train(
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-    print(len(train_loader), len(test_loader))
+    print(f"train size: {len(train_loader)}, test size: {len(test_loader)}")
 
     start_epoch = 0
 
@@ -99,6 +101,8 @@ def train(
         if write_log:
             writer.add_scalar("Loss/train", avg_tran_loss, epoch)
 
+        print(f"Epoch {epoch}, train loss: {avg_tran_loss}")
+
         if epoch and epoch % save_every == 0:
 
             with torch.no_grad():
@@ -119,6 +123,8 @@ def train(
                 if write_log:
                     writer.add_scalar("Loss/test", avg_test_loss, (epoch + 1))
 
+                print(f"Epoch {epoch}, test loss: {avg_test_loss}")
+
                 if avg_test_loss < best_test_loss:
                     best_test_loss = avg_test_loss
                     torch.save(
@@ -126,9 +132,15 @@ def train(
                         f"{checkpoint_dir}/model_{epoch}.pth",
                     )
 
+                    print(f"save model at epoch {epoch} with test loss {avg_test_loss}")
+
+    writer.close()
+
 
 if __name__ == "__main__":
 
     model = Seq2SeqLSTM(input_size=17 * 3, hidden_size=64, num_layers=2)
 
-    train(model)
+    train(
+        model, pretrained_checkpoint=os.path.join("checkpoints", "best_model_250.pth")
+    )
