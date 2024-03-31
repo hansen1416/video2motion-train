@@ -129,7 +129,7 @@ def train(
                     best_test_loss = avg_test_loss
                     torch.save(
                         model.state_dict(),
-                        f"{checkpoint_dir}/model_{epoch}.pth",
+                        f"{checkpoint_dir}/{model.__class__.__name__}_{epoch}.pth",
                     )
 
                     print(f"save model at epoch {epoch} with test loss {avg_test_loss}")
@@ -141,6 +141,4 @@ if __name__ == "__main__":
 
     model = Seq2SeqLSTM(input_size=17 * 3, hidden_size=64, num_layers=2)
 
-    train(
-        model, pretrained_checkpoint=os.path.join("checkpoints", "best_model_250.pth")
-    )
+    train(model, pretrained_checkpoint=os.path.join("checkpoints", "model_280.pth"))
