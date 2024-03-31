@@ -1,7 +1,7 @@
 import os
 
 import torch
-from torch import nn, optim
+from torch import nn
 from torch.utils.data import DataLoader
 import torch.optim.lr_scheduler as lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
