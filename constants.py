@@ -37,6 +37,8 @@ CHECKPOINT_DIR = os.path.join(
 
 SCREENSHOT_DIR = os.path.join(HOME_DIR, "Documents", "video2motion", "screenshots")
 
+BASE_DIR = os.path.join(os.path.expanduser("~"), "Documents")
+# BASE_DIR = "D:\\"
 
 BLAZEPOSE_KEYPOINTS = {
     0: "NOSE",
