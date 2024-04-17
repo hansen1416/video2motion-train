@@ -6,6 +6,90 @@ import torch
 from torch.utils.data import Dataset
 
 
+def flatten_anim_data():
+    """
+    from videopose3d_euler_dataset to videopose3d_euler_pose_dataset
+
+    from animation data to frame wise data
+
+    """
+
+    dataset_dir = os.path.join(
+        BASE_DIR,
+        "video2motion",
+        "videopose3d_euler_dataset",
+    )
+
+    with open(os.path.join(dataset_dir, "features.pkl"), "rb") as f:
+        features = pickle.load(f)
+
+    with open(os.path.join(dataset_dir, "targets.pkl"), "rb") as f:
+        targets = pickle.load(f)
+
+    with open(os.path.join(dataset_dir, "metadata.pkl"), "rb") as f:
+        metadata = pickle.load(f)
+
+    merkmale = []
+    ziele = []
+    metadaten = []
+
+    for i in range(len(features)):
+        for j in range(len(features[i])):
+
+            pose = np.array(features[i][j])
+            euler = np.array(targets[i][j])
+            meta = {
+                "name": metadata[i]["name"],
+                "total_frame": metadata[i]["total_frame"],
+                "frame": j,
+            }
+
+            # print(pose.shape, euler.shape, meta)
+
+            merkmale.append(pose)
+            ziele.append(euler)
+            metadaten.append(meta)
+
+        #     break
+        # break
+
+    merkmale = np.array(merkmale)
+    ziele = np.array(ziele)
+
+    print(merkmale.shape, ziele.shape, len(metadaten))
+
+    np.save(
+        os.path.join(
+            BASE_DIR,
+            "video2motion",
+            "videopose3d_euler_pose_dataset",
+            "features1.npy",
+        ),
+        merkmale,
+    )
+
+    np.save(
+        os.path.join(
+            BASE_DIR,
+            "video2motion",
+            "videopose3d_euler_pose_dataset",
+            "targets1.npy",
+        ),
+        ziele,
+    )
+
+    with open(
+        os.path.join(
+            BASE_DIR,
+            "video2motion",
+            "videopose3d_euler_pose_dataset",
+            "metadata1.pkl",
+        ),
+        "wb",
+    ) as f:
+        pickle.dump(metadaten, f)
+
+
 class Datensatz(Dataset):
 
     def __init__(
@@ -44,8 +128,15 @@ class Datensatz(Dataset):
 
 if __name__ == "__main__":
 
+    import sys
+
+    # sys path append ../constants
+    sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
+    from constants import BASE_DIR
+
     dataset_dir = os.path.join(
-        "d:\\",
+        BASE_DIR,
         "video2motion",
         "videopose3d_euler_pose_dataset",
     )

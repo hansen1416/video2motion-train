@@ -1,4 +1,5 @@
 # https://magazine.sebastianraschka.com/p/understanding-and-coding-self-attention
+import math
 
 import numpy as np
 import torch
@@ -27,40 +28,48 @@ class SelfAttention(nn.Module):
         self.d_out_kq = d_out_kq
 
         # (embedding_size, d_out_kq)
-        self.W_query = nn.Parameter(torch.rand(d_in, d_out_kq))
+        # self.W_query = nn.Parameter(torch.rand(d_in, d_out_kq))
+        self.W_query = nn.Linear(d_in, d_out_kq)
         # (embedding_size, d_out_kq)
-        self.W_key = nn.Parameter(torch.rand(d_in, d_out_kq))
+        # self.W_key = nn.Parameter(torch.rand(d_in, d_out_kq))
+        self.W_key = nn.Linear(d_in, d_out_kq)
         # (embedding_size, d_out_v)
-        self.W_value = nn.Parameter(torch.rand(d_in, d_out_v))
+        # self.W_value = nn.Parameter(torch.rand(d_in, d_out_v))
+        self.W_value = nn.Linear(d_in, d_out_v)
 
     def forward(self, x):
-        # (sentence_length, embedding_size) @ (embedding_size, d_out_kq) = (sentence_length, d_out_kq)
-        # each item in `keys` is the keys weights for each word in the sentence
-        # represents what information each element in the sequence can provide.
-        keys = x @ self.W_key
-        # (sentence_length, embedding_size) @ (embedding_size, d_out_kq) = (sentence_length, d_out_kq)
+
         # each item in `queries` is the queries weights for each word in the sentence
         # represents what information a specific element in the sequence needs from others. therefore keys.T
-        queries = x @ self.W_query
-        # (sentence_length, embedding_size) @ (embedding_size, d_out_v) = (sentence_length, d_out_v)
+        queries = self.W_query(x)
+
+        # each item in `keys` is the keys weights for each word in the sentence
+        # represents what information each element in the sequence can provide.
+        keys = self.W_key(x)
+
         # each item in `values` is the values weights for each word in the sentence
         # holds the actual information of each element.
-        values = x @ self.W_value
+        values = self.W_value(x)
+
+        # (batch_size, sentence_length, embedding_size) @ (embedding_size, d_out_kq) = (batch_size, sentence_length, d_out_kq)
+        # (batch_size, sentence_length, d_out_kq)
+        # print(queries.shape, keys.shape, values.shape)
 
         # attention score $\omega_{i,j} = q^{(i)} k^{(j)}$
-        # (sentence_length, d_out_kq) @ (d_out_kq, sentence_length) = (sentence_length, sentence_length)
-        attn_scores = queries @ keys.T
+        # (batch_size, sentence_length, d_out_kq) @ (batch_size, d_out_kq, sentence_length) = (batch_size, sentence_length, sentence_length)
+        attn_scores = queries @ keys.transpose(-2, -1)
+
         # to obtain the normalized attention weights, α (alpha),
         # by applying the softmax function. Additionally, 1/√{d_k} is used to scale $\omega$
         # before normalizing it through the softmax function
         # The scaling by d_k ensures that the Euclidean length of the weight vectors will be approximately in the same magnitude.
         # dim=-1. This ensures that the attention weights for each element (represented by rows in the tensor) sum up to 1.
-        # (sentence_length, sentence_length)
+        # (batch_size, sentence_length, sentence_length)
         attn_weights = torch.softmax(attn_scores / self.d_out_kq**0.5, dim=-1)
 
         # the context vector z^(i), which is an attention-weighted version of our original query input x^(i),
         # including all the other input elements as its context via the attention weights:
-        # (sentence_length, sentence_length) @ (sentence_length, d_out_v) = (sentence_length, d_out_v)
+        # (batch_size, sentence_length, sentence_length) @ (batch_size, sentence_length, d_out_v) = (batch_size, sentence_length, d_out_v)
         context_vec = attn_weights @ values
         return context_vec
 
@@ -78,27 +87,35 @@ class MultiHeadAttentionWrapper(nn.Module):
     eg. the 7B Llama 2 model uses 32 attention heads.
     """
 
-    def __init__(self, d_in, d_out_kq, d_out_v, num_heads):
+    def __init__(
+        self, input_seq_len, output_seq_len, d_in, d_out_kq, d_out_v, num_heads
+    ):
         super().__init__()
         # each self-attention head will have its own set of weight matrices, they work in parallel
         self.heads = nn.ModuleList(
             [SelfAttention(d_in, d_out_kq, d_out_v) for _ in range(num_heads)]
         )
 
-        fc1_in = 17 * d_out_v
-        fc1_out = int(17 * 2)
+        self.input_seq_len = input_seq_len
+        self.output_seq_len = output_seq_len
+        self.d_in = d_in
+        self.d_out_kq = d_out_kq
+        self.d_out_v = d_out_v
 
-        fc2_in = fc1_out
-        fc2_out = 17
+        fc1_in = int(input_seq_len * d_out_v)
+        fc1_out = int(input_seq_len * d_out_v // 2)
+        fc2_out = input_seq_len
 
         # print(fc1_in, fc1_out, fc2_in, fc2_out)
 
         self.fc1 = nn.ModuleList([nn.Linear(fc1_in, fc1_out) for _ in range(num_heads)])
-        self.activaton = nn.Tanh()
-        self.fc2 = nn.ModuleList([nn.Linear(fc2_in, fc2_out) for _ in range(num_heads)])
+        self.activ = nn.Tanh()
+        self.fc2 = nn.ModuleList(
+            [nn.Linear(fc1_out, fc2_out) for _ in range(num_heads)]
+        )
 
         # target is of shape (12, 3)
-        self.fc3 = nn.Linear(fc2_out * num_heads, 36)
+        self.fc3 = nn.Linear(fc2_out * num_heads, output_seq_len * d_in)
 
     def forward(self, x):
 
@@ -107,21 +124,25 @@ class MultiHeadAttentionWrapper(nn.Module):
         for i, head in enumerate(self.heads):
             xi = head(x)
 
-            xi = xi.flatten()
+            xi = xi.view(-1, self.input_seq_len * self.d_out_v)
+
+            # print("xi.shape flatten:", xi.shape)
 
             xi = self.fc1[i](xi)
-            xi = self.activaton(xi)
+            xi = self.activ(xi)
             xi = self.fc2[i](xi)
 
             output.append(xi)
 
         x = torch.cat(output, dim=-1)
 
-        x = self.activaton(x)
+        # print("x.shape after cat:", x.shape)
+
+        x = self.activ(x)
 
         x = self.fc3(x)
 
-        return x.reshape(-1, 12, 3)
+        return x.reshape(-1, self.output_seq_len, self.d_in)
 
 
 if __name__ == "__main__":
@@ -144,19 +165,26 @@ if __name__ == "__main__":
     # torch.Size([6, 3])
     embedded_sentence = embed(sentence_int).detach()
 
-    print(embedded_sentence.shape)
+    # (8, 6, 3)
+    embedded_sentence_batch = torch.tensor(
+        np.array([embedded_sentence for _ in range(8)])
+    )
 
-    d_in, d_out_kq, d_out_v = 3, 2, 4
+    # d_in, d_out_kq, d_out_v = 3, 2, 4
 
-    sa = SelfAttention(d_in, d_out_kq, d_out_v)
+    # sa = SelfAttention(d_in, d_out_kq, d_out_v)
 
-    res = sa(embedded_sentence)
+    # res = sa(embedded_sentence_batch)
 
-    print(res, res.shape)
+    # print(res, res.shape)
 
-    d_in, d_out_kq, d_out_v, num_heads = 3, 2, 4, 3
+    input_seq_len, output_seq_len = 6, 12
 
-    mha = MultiHeadAttentionWrapper(d_in, d_out_kq, d_out_v, num_heads)
+    d_in, d_out_kq, d_out_v, num_heads = 3, 2, 4, 4
+
+    mha = MultiHeadAttentionWrapper(
+        input_seq_len, output_seq_len, d_in, d_out_kq, d_out_v, num_heads
+    )
 
     res = mha(embedded_sentence)
 
