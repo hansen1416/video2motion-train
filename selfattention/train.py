@@ -198,7 +198,7 @@ def train(
 
         train_loss_value = 0.0
 
-        for x, y, _ in enumerate(train_loader):
+        for x, y, _ in train_loader:
 
             optimizer.zero_grad()
 
