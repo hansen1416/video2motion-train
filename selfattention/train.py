@@ -48,7 +48,7 @@ if __name__ == "__main__":
     # print(len(train_loader), len(test_loader))
 
     input_seq_len, output_seq_len = 17, 12
-    d_in, d_out_kq, d_out_v, num_heads = 3, 2, 4, 4
+    d_in, d_out_kq, d_out_v, num_heads = 3, 6, 8, 4
 
     mha = MultiHeadAttentionWrapper(
         input_seq_len, output_seq_len, d_in, d_out_kq, d_out_v, num_heads

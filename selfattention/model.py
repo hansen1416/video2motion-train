@@ -119,27 +119,22 @@ class MultiHeadAttentionWrapper(nn.Module):
 
     def forward(self, x):
 
-        output = []
+        x_linear_heads = []
 
         for i, head in enumerate(self.heads):
             xi = head(x)
-
+            # flatten for each batch
             xi = xi.view(-1, self.input_seq_len * self.d_out_v)
-
-            # print("xi.shape flatten:", xi.shape)
 
             xi = self.fc1[i](xi)
             xi = self.activ(xi)
             xi = self.fc2[i](xi)
 
-            output.append(xi)
+            x_linear_heads.append(xi)
 
-        x = torch.cat(output, dim=-1)
-
-        # print("x.shape after cat:", x.shape)
-
+        # (input_seq_len * num_heads)
+        x = torch.cat(x_linear_heads, dim=-1)
         x = self.activ(x)
-
         x = self.fc3(x)
 
         return x.reshape(-1, self.output_seq_len, self.d_in)
@@ -180,7 +175,7 @@ if __name__ == "__main__":
 
     input_seq_len, output_seq_len = 6, 12
 
-    d_in, d_out_kq, d_out_v, num_heads = 3, 2, 4, 4
+    d_in, d_out_kq, d_out_v, num_heads = 3, 2, 4, 5
 
     mha = MultiHeadAttentionWrapper(
         input_seq_len, output_seq_len, d_in, d_out_kq, d_out_v, num_heads
