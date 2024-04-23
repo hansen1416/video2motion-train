@@ -358,4 +358,4 @@ if __name__ == "__main__":
 
     print(len(train_loader), len(test_loader))
 
-    train(train_loader, test_loader, save_after_epoch=-1)
+    train(train_loader, test_loader, save_after_epoch=50)
