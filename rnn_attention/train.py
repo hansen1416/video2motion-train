@@ -8,9 +8,12 @@ import torch.optim.lr_scheduler as lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 from dotenv import load_dotenv
 
+from dataset import Datensatz
+
 load_dotenv()
 
-from dataset import Datensatz
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class SelfAttention(nn.Module):
@@ -80,7 +83,7 @@ class SelfAttention(nn.Module):
         return context_vec
 
 
-class MultiHeadAttentionWrapper(nn.Module):
+class MultiHeadAttention(nn.Module):
     """
     each attention head in multi-head attention can potentially learn to focus on different parts of the input sequence,
     capturing various aspects or relationships within the data.
@@ -93,9 +96,7 @@ class MultiHeadAttentionWrapper(nn.Module):
     eg. the 7B Llama 2 model uses 32 attention heads.
     """
 
-    def __init__(
-        self, input_seq_len, output_seq_len, d_in, d_out_kq, d_out_v, num_heads
-    ):
+    def __init__(self, input_seq_len, d_in, d_out_kq, d_out_v, num_heads):
         super().__init__()
         # each self-attention head will have its own set of weight matrices, they work in parallel
         self.heads = nn.ModuleList(
@@ -103,30 +104,46 @@ class MultiHeadAttentionWrapper(nn.Module):
         )
 
         self.input_seq_len = input_seq_len
-        self.output_seq_len = output_seq_len
         self.d_in = d_in
         self.d_out_kq = d_out_kq
         self.d_out_v = d_out_v
-
-        fc1_in = int(input_seq_len * d_out_v)
-        fc1_out = int(input_seq_len * d_out_v * 2)
-        fc2_out = input_seq_len * 2
-
-        # print(fc1_in, fc1_out, fc2_in, fc2_out)
-
-        self.fc1 = nn.ModuleList([nn.Linear(fc1_in, fc1_out) for _ in range(num_heads)])
-        self.activ = nn.Tanh()
-        self.fc2 = nn.ModuleList(
-            [nn.Linear(fc1_out, fc2_out) for _ in range(num_heads)]
-        )
-
-        # target is of shape (12, 3)
-        self.fc3 = nn.Linear(fc2_out * num_heads, output_seq_len * d_in * 2)
+        self.num_heads = num_heads
 
     def forward(self, x):
 
-        x_linear_heads = []
+        # each head will produce a context vector
+        # (num_heads, batch_size, sentence_length, d_out_v)
+        head_outputs = torch.stack([head(x) for head in self.heads])
 
+        # reshape the output to (batch_size, num_heads, sentence_length, d_out_v)
+        head_outputs = head_outputs.permute(1, 0, 2, 3)
+
+        return head_outputs
+
+
+class MultiHeadLinearLayer(nn.Module):
+
+    def __init__(
+        self,
+        num_heads,
+        input_seq_len,
+        d_out_v,
+        hidden_size,
+        output_size,
+    ):
+        super().__init__()
+
+        self.num_heads = num_heads
+        self.input_seq_len = input_seq_len
+        self.d_out_v = d_out_v
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+
+        self.fc1 = nn.Linear(input_seq_len * d_out_v, hidden_size)
+        self.fc2 = nn.Linear(hidden_size * num_heads, output_size)
+
+    def forward(self, x):
+        """
         for i, head in enumerate(self.heads):
             xi = head(x)
             # flatten for each batch
@@ -142,65 +159,106 @@ class MultiHeadAttentionWrapper(nn.Module):
         x = torch.cat(x_linear_heads, dim=-1)
         x = self.activ(x)
         x = self.fc3(x)
+        """
 
-        return x
-        # return x.reshape(-1, self.output_seq_len, self.d_in)
+        batch_size = x.shape[0]
+
+        fc1_output = torch.zeros(batch_size, self.num_heads, self.hidden_size).to(
+            device
+        )
+
+        for i in range(self.num_heads):
+            xi = x[:, i, :, :].reshape(-1, self.input_seq_len * self.d_out_v)
+            xi = self.fc1(xi)
+            xi = F.tanh(xi)
+
+            fc1_output[:, i, :] = xi
+
+        output = fc1_output.reshape(batch_size, self.num_heads * self.hidden_size)
+
+        output = self.fc2(output)
+
+        return output
 
 
-class RNNAttention(nn.Module):
+class DoubleAttention(nn.Module):
     def __init__(
         self,
-        input_seq_len,
-        output_seq_len,
-        d_in,
-        d_out_kq,
-        d_out_v,
-        num_heads,
-        rnn_input_size,
-        rnn_hidden_size,
-        rnn_num_layers,
-        total_sequence_length=30,
-    ):
+    ) -> None:
         super().__init__()
 
-        self.attention = MultiHeadAttentionWrapper(
-            input_seq_len, output_seq_len, d_in, d_out_kq, d_out_v, num_heads
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        self.inner_seq_len = 17
+        self.inner_num_heads = 4
+        self.inner_d_in = 3
+        self.inner_d_out_kq = 6
+        self.inner_d_out_v = 8
+        self.inner_linear_hidden = 256
+        self.inner_linear_output = 64
+
+        self.outter_seq_len = 30
+        self.outter_d_in = self.inner_linear_output
+        self.outter_d_out_kq = 64
+        self.outter_d_out_v = 64
+        self.outter_linear_hidden = 1024
+        self.outter_linear_output = 36 * self.outter_seq_len
+        self.outter_num_heads = 4
+
+        self.ma_inner = MultiHeadAttention(
+            self.inner_seq_len,
+            self.inner_d_in,
+            self.inner_d_out_kq,
+            self.inner_d_out_v,
+            self.inner_num_heads,
+        )
+        self.ml_inner = MultiHeadLinearLayer(
+            self.inner_num_heads,
+            self.inner_seq_len,
+            self.inner_d_out_v,
+            self.inner_linear_hidden,
+            self.inner_linear_output,
         )
 
-        self.gru = nn.GRU(
-            input_size=rnn_input_size,
-            hidden_size=rnn_hidden_size,
-            num_layers=rnn_num_layers,
-            batch_first=True,
+        self.ma_outter = MultiHeadAttention(
+            self.outter_seq_len,
+            self.outter_d_in,
+            self.outter_d_out_kq,
+            self.outter_d_out_v,
+            self.outter_num_heads,
+        )
+        self.ml_outter = MultiHeadLinearLayer(
+            self.outter_num_heads,
+            self.outter_seq_len,
+            self.outter_d_out_v,
+            self.outter_linear_hidden,
+            self.outter_linear_output,
         )
 
-        self.fc = nn.Linear(rnn_hidden_size, output_seq_len * d_in)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        seq_output = torch.zeros(
+            x.shape[0], self.outter_seq_len, self.inner_linear_output
+        ).to(self.device)
 
-        self.output_seq_len = output_seq_len
-        self.d_in = d_in
-        self.total_sequence_length = total_sequence_length
+        for i in range(self.outter_seq_len):
 
-    def forward(self, x):
+            output = self.ma_inner(x[:, i, :, :])
+            output = self.ml_inner(output)
 
-        # the size of x is (batch_size, sequence_length, bone_length, d_in),
-        # where sequence_length=30, bone_length=17
-        # pass each item in the batch to the attention model
-        seq_attention = torch.stack([self.attention(xi) for xi in x], dim=0)
-        # the size of `seq_attention` is (batch_size, sequence_length, output_seq_len*d_in*2)
+            seq_output[:, i, :] = output
 
-        # seq_attention to a GRU layer
-        rnn_output, _ = self.gru(seq_attention)
-        # the size of `rnn_output` is (batch_size, sequence_length, rnn_hidden_size),
-        # where sequence_length=30, rnn_hidden_size=output_seq_len*d_in=17*3
+        # print(seq_output.shape)
 
-        # pass the output of the GRU layer to a fully connected layer
-        output = self.fc(rnn_output)
+        output = self.ma_outter(seq_output)
 
         # print(output.shape)
 
-        return output.reshape(
-            -1, self.total_sequence_length, self.output_seq_len, self.d_in
-        )
+        output = self.ml_outter(output)
+        output = output.view(-1, self.outter_seq_len, 12, 3)
+
+        # print(output.shape)
+
+        return output
 
 
 def train(
@@ -215,27 +273,7 @@ def train(
 
     os.makedirs(checkpoint_dir, exist_ok=True)
 
-    input_seq_len, output_seq_len = 17, 12
-    d_in, d_out_kq, d_out_v, num_heads = 3, 6, 8, 4
-
-    rnn_input_size, rnn_hidden_size, rnn_num_layers = (
-        output_seq_len * d_in * 2,
-        output_seq_len * d_in,
-        2,
-    )
-
-    model = RNNAttention(
-        input_seq_len,
-        output_seq_len,
-        d_in,
-        d_out_kq,
-        d_out_v,
-        num_heads,
-        rnn_input_size,
-        rnn_hidden_size,
-        rnn_num_layers,
-        total_sequence_length=30,
-    )
+    model = DoubleAttention()
 
     start_epoch = 0
 
@@ -329,8 +367,6 @@ def train(
 
 if __name__ == "__main__":
 
-    # sys path append ../constants
-
     # check env variable `BASE_DIR`
     datadir = os.path.join(os.getenv("BASE_DIR"), "videopose3d_euler_dataset_trunk30")
 
@@ -352,9 +388,11 @@ if __name__ == "__main__":
         dataset, [train_size, test_size]
     )
 
+    batch_size = 128
+
     # Create data loaders
-    train_loader = DataLoader(train_dataset, batch_size=256, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=256, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     print(len(train_loader), len(test_loader))
 
