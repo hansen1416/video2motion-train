@@ -143,30 +143,13 @@ class MultiHeadLinearLayer(nn.Module):
         self.fc2 = nn.Linear(hidden_size * num_heads, output_size)
 
     def forward(self, x):
-        """
-        for i, head in enumerate(self.heads):
-            xi = head(x)
-            # flatten for each batch
-            xi = xi.view(-1, self.input_seq_len * self.d_out_v)
-
-            xi = self.fc1[i](xi)
-            xi = self.activ(xi)
-            xi = self.fc2[i](xi)
-
-            x_linear_heads.append(xi)
-
-        # (input_seq_len * num_heads)
-        x = torch.cat(x_linear_heads, dim=-1)
-        x = self.activ(x)
-        x = self.fc3(x)
-        """
 
         batch_size = x.shape[0]
 
         fc1_output = torch.zeros(batch_size, self.num_heads, self.hidden_size).to(
             device
         )
-
+        # pass each head output through a linear layer
         for i in range(self.num_heads):
             xi = x[:, i, :, :].reshape(-1, self.input_seq_len * self.d_out_v)
             xi = self.fc1(xi)
@@ -174,6 +157,7 @@ class MultiHeadLinearLayer(nn.Module):
 
             fc1_output[:, i, :] = xi
 
+        # concatenate the output of each head
         output = fc1_output.reshape(batch_size, self.num_heads * self.hidden_size)
 
         output = self.fc2(output)
@@ -240,6 +224,7 @@ class DoubleAttention(nn.Module):
             x.shape[0], self.outter_seq_len, self.inner_linear_output
         ).to(self.device)
 
+        # first learn the inner sequence separately
         for i in range(self.outter_seq_len):
 
             output = self.ma_inner(x[:, i, :, :])
@@ -247,18 +232,13 @@ class DoubleAttention(nn.Module):
 
             seq_output[:, i, :] = output
 
-        # print(seq_output.shape)
-
+        # pass the inner sequence output to the outter sequence attention
         output = self.ma_outter(seq_output)
 
-        # print(output.shape)
-
         output = self.ml_outter(output)
-        output = output.view(-1, self.outter_seq_len, 12, 3)
 
-        # print(output.shape)
-
-        return output
+        # 12 bones and 3 coordinates
+        return output.view(-1, self.outter_seq_len, 12, 3)
 
 
 def train(
