@@ -20,22 +20,21 @@ class Datensatz(Dataset):
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        features = torch.tensor(np.load(feature_file_path), dtype=torch.float32).to(
-            self.device
-        )
-        targets = torch.tensor(np.load(target_file_path), dtype=torch.float32).to(
-            self.device
-        )
+        features = np.load(feature_file_path)
+        targets = np.load(target_file_path)
 
         # check features, any row contains 0 data more than 30%, remove them
-        mask = torch.all(features == 0, dim=1)
+        for i in range(features.shape[0]):
+            # Assuming you have your data in a NumPy array named 'data'
+            num_zeros = np.count_nonzero(
+                features[i] == 0.0
+            )  # Count the number of elements equal to 0.0
 
-        print(mask)
+            if num_zeros > 0:
+                print(num_zeros, features[i].size)
 
-        features = features[~mask]
-
-        self.features = features
-        self.targets = targets
+        self.features = torch.tensor(features, dtype=torch.float32).to(self.device)
+        self.targets = torch.tensor(targets, dtype=torch.float32).to(self.device)
 
         assert len(self.features) == len(
             self.targets
