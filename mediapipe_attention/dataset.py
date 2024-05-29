@@ -23,6 +23,8 @@ class Datensatz(Dataset):
         features = np.load(feature_file_path)
         targets = np.load(target_file_path)
 
+        mask = []
+
         # check features, any row contains 0 data more than 30%, remove them
         for i in range(features.shape[0]):
             # Assuming you have your data in a NumPy array named 'data'
@@ -30,8 +32,11 @@ class Datensatz(Dataset):
                 features[i] == 0.0
             )  # Count the number of elements equal to 0.0
 
-            if num_zeros > 0:
-                print(num_zeros, features[i].size)
+            if num_zeros / features[i].size > 0.2:
+                mask.append(i)
+
+        features = np.delete(features, mask, axis=0)
+        targets = np.delete(targets, mask, axis=0)
 
         self.features = torch.tensor(features, dtype=torch.float32).to(self.device)
         self.targets = torch.tensor(targets, dtype=torch.float32).to(self.device)
